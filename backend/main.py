@@ -21,7 +21,10 @@ app.include_router(admin.router, prefix="/admin", tags=["admin"])
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:4173",  # Dùng đúng cổng frontend
+        "http://127.0.0.1:4173"   # Optionally: thêm cả 127.0.0.1
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
