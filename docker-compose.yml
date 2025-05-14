@@ -10,3 +10,11 @@ services:
     volumes:
       - ./backend:/app
     restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend-app
+    ports:
+      - "4173:4173"
+    restart: unless-stopped
