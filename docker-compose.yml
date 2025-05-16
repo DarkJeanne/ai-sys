@@ -18,3 +18,15 @@ services:
     ports:
       - "4173:4173"
     restart: unless-stopped
+<<<<<<< Updated upstream
+=======
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: mydb
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+>>>>>>> Stashed changes

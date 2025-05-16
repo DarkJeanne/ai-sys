@@ -23,4 +23,8 @@ RUN npm install --omit=dev
 
 EXPOSE 4173
 
+<<<<<<< Updated upstream
 CMD ["npx", "vite", "preview", "--host"]
+=======
+CMD ["npx", "vite", "preview", "--host"]
+>>>>>>> Stashed changes
