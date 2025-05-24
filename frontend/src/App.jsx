@@ -160,6 +160,19 @@ function MainApp() {
             </div>
           </div>
 
+          {/* Video Display */}
+            {state.inputType === 'video' && selectedFile && (
+              <div className="flex-1">
+                <video
+                  src={URL.createObjectURL(selectedFile)}
+                  controls
+                  width="100%"
+                  height="auto"
+                  className="rounded-lg shadow-xl"
+                />
+              </div>
+            )}
+
           {/* Upload Section */}
           <div className="flex-1">
             <div className="max-w-xl mx-auto bg-white p-14 rounded-2xl shadow-lg">

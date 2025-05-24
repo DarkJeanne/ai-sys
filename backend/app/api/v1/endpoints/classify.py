@@ -15,6 +15,10 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
+from fastapi import WebSocket, Query, WebSocketDisconnect
+from app.core.security import get_user_from_token
+from starlette.websockets import WebSocketState
+import asyncio
 
 router = APIRouter()
 classifier = Classifier()
@@ -65,8 +69,22 @@ async def analyze_image(file: UploadFile = File(...)):
 
 @router.websocket("/ws/camera")
 async def websocket_camera(websocket: WebSocket):
-    print("WebSocket connection started")
+    token = websocket.query_params.get("token")
+    if not token:
+        print("No token in query params")
+        await websocket.close(code=1008)
+        return
+
+    user = get_user_from_token(token)
+    if not user:
+        print("Token invalid or expired")
+        await websocket.close(code=1008)
+        return
+
+    print("Token received:", token)
+
     await websocket.accept()
+
     try:
         while True:
             # Nhận frame base64 từ client (định dạng chuỗi)
@@ -78,6 +96,10 @@ async def websocket_camera(websocket: WebSocket):
             # Chuyển bytes thành numpy array (để OpenCV xử lý)
             nparr = np.frombuffer(frame_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if frame is None:
+                print('Failded to decode frame')
+                await websocket.close(code=1003)
+                return
 
             # Xử lý frame với model classification (bạn convert frame cho phù hợp)
             result = classifier.predict_frame(frame)
@@ -91,100 +113,56 @@ async def websocket_camera(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        await websocket.close()
+        pass
 
 
-@router.post("/analyze_video")
-async def analyze_video(file: UploadFile = File(...)):
+@router.websocket("/ws/video_stream")
+async def websocket_video_stream(websocket: WebSocket):
+    await websocket.accept()
     try:
-        contents = await file.read()
-
-        # Ghi ra file tạm để phân biệt định dạng
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp:
-            temp.write(contents)
-            temp_path = temp.name
-
-        # Mở video
-        cap = cv2.VideoCapture(temp_path)
-
-        if not cap.isOpened():
-            raise HTTPException(status_code=400, detail="Không thể mở video")
-
-        # Cài đặt frame rate mong muốn (60fps)
-        cap.set(cv2.CAP_PROP_FPS, 60)
-
-        # Kiểm tra frame rate thực tế từ video
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        print(f"Video đang chạy ở {fps} FPS")
-
-        frame_count = 0
-        results = []
-
         while True:
-            start_time = time.time()  # Ghi lại thời gian bắt đầu mỗi frame
+            # Nhận dữ liệu, có thể là bytes hoặc text
+            try:
+                data = await websocket.receive_bytes()
+                is_bytes = True
+            except Exception:
+                # Nếu không nhận được bytes, thử nhận text
+                data = await websocket.receive_text()
+                is_bytes = False
 
-            # Đọc một frame từ video
-            ret, frame = cap.read()
-            if not ret:
-                break
+            # Kiểm tra tín hiệu kết thúc
+            if not is_bytes:
+                if data == "EOF" or data == "END":
+                    print("Client sent EOF, closing websocket")
+                    break
+                else:
+                    print(f"Unexpected text message: {data}")
+                    continue
 
-            # Chuyển frame thành RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Tiền xử lý frame cho mô hình
-            processed_frame = video_processor.process_frame(frame_rgb)
-
-            # Dự đoán phân loại cho frame
-            result = classifier.predict_image(processed_frame)
-            results.append({
-                "frameIndex": frame_count,
-                "classification": result["classification"],
-                "confidence": result["confidence"]
-            })
-            frame_count += 1
-
-            # Hiển thị kết quả lên cửa sổ video
-            cv2.putText(frame, f"Class: {result['classification']} Confidence: {result['confidence']:.2f}",
-                        (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow("Video Stream", frame)
-
-            # Tính toán thời gian xử lý và điều chỉnh delay để duy trì 60fps
-            elapsed_time = time.time() - start_time
-            delay_time = max(1.0 / 60 - elapsed_time, 0)  # Đảm bảo không có độ trễ âm
-            time.sleep(delay_time)  # Điều chỉnh độ trễ để duy trì 60fps
-
-            # Dừng khi nhấn phím 'q'
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-        cap.release()
-        cv2.destroyAllWindows()
-
-        return {
-            "type": "video",
-            "status": "success",
-            "totalFramesProcessed": len(results),
-            "results": results
-        }
+            # Nếu là frame bytes, xử lý bình thường
+            asyncio.create_task(handle_frame(data, websocket))
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi xử lý: {str(e)}")
+        print(f"WebSocket error: {e}")
+    finally:
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
 
 
-@router.post("/frame", response_model=ClassificationResultResponse)
-async def classify_frame(file: UploadFile = File(...)):
-    print(f"Received file: {file.filename}, content_type={file.content_type}")
+async def handle_frame(data, websocket: WebSocket):
     try:
-        image_bytes = await file.read()
-        image = utils.preprocess_image(image_bytes)  # Phải nhanh, trả PIL Image hoặc ndarray chuẩn
-        result = classifier.predict_image(image)
+        nparr = np.frombuffer(data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        return ClassificationResultResponse(
-            id=0,  # Nếu ko lưu DB
-            image_url="",
-            classification=result.get("classification") or result.get("label") or "Không xác định",
-            confidence=result.get("confidence", 0.0),
-            created_at=datetime.utcnow()
-        )
+        if frame is None:
+            return
+
+        result = classifier.predict_frame(frame)
+
+        await websocket.send_json({
+            "classification": result["classification"],
+            "confidence": result["confidence"],
+            "bounding_box": result.get("bounding_box", [])
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi xử lý frame: {str(e)}")
+        print("Frame error:", e)

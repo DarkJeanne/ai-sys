@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function WebcamRealtimeClassification() {
   const videoRef = useRef(null);
@@ -12,6 +13,9 @@ export default function WebcamRealtimeClassification() {
     bounding_box: [] // [x1, y1, x2, y2]
   });
 
+  const { user } = useAuth();
+  const token = user?.token || localStorage.getItem('token') || sessionStorage.getItem('token');
+
   useEffect(() => {
     console.log("Detection bbox:", detection.bounding_box);
     // Mở webcam
@@ -24,7 +28,16 @@ export default function WebcamRealtimeClassification() {
     startCamera();
 
     // Mở websocket
-    const ws = new WebSocket('ws://localhost:8000/classify/ws/camera');
+
+  if (!token) {
+    console.error("❌ Access token not found");
+    return;
+  }
+
+    const wsUrl = (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://localhost:8000/classify/ws/camera?token=' + encodeURIComponent(token);
+
+    const ws = new WebSocket(wsUrl);
+
     ws.onopen = () => {
       console.log('WebSocket connected');
       setWsConnected(true);
@@ -49,9 +62,32 @@ export default function WebcamRealtimeClassification() {
     wsRef.current = ws;
 
     return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, []);
+      const ws = wsRef.current;
+
+      if (!ws) return;
+
+      const state = ws.readyState;
+
+      console.log('🧹 Cleanup: websocket state =', state);
+
+      // Chỉ đóng nếu đang kết nối hoặc đã mở
+      if (state === WebSocket.CONNECTING) {
+        // Chờ websocket mở rồi mới đóng
+        ws.addEventListener('open', () => {
+          console.log('🧹 Delayed close after CONNECTING...');
+          ws.close();
+        });
+      } else if (state === WebSocket.OPEN) {
+        console.log('🧹 Closing OPEN WebSocket...');
+        ws.close();
+      } else {
+        console.log('🧹 No need to close: WebSocket already closing/closed');
+      }
+
+      wsRef.current = null;
+      };
+
+  }, [token]);
 
 
   const inputWidth = 320;

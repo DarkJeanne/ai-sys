@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.core.security import hash_password
 
+
 router = APIRouter()
 
 
@@ -53,3 +54,5 @@ def register(user_data: schemas.auth.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+

@@ -1,59 +1,44 @@
-import os
-from PIL import Image
-import numpy as np
-from app.services.classifier import Classifier
-from app.services.video_processor import VideoProcessor
-from app.services.utils import preprocess_image
 import cv2
+from ultralytics import YOLO
 
-def test_services():
-    print("=== Testing Services ===")
-    
-    # Initialize services
-    print("\n1. Initializing services...")
-    classifier = Classifier()
-    video_processor = VideoProcessor()
-    print("✓ Services initialized")
-    
-    # Create test image
-    print("\n2. Creating test image...")
-    test_image = Image.new('RGB', (100, 100), color='red')
-    print("✓ Test image created")
-    
-    # Test image classification
-    print("\n3. Testing image classification...")
-    try:
-        result = classifier.predict_image(test_image)
-        print(f"✓ Classification result: {result}")
-    except Exception as e:
-        print(f"✗ Classification failed: {str(e)}")
-    
-    # Test video processing
-    print("\n4. Testing video processing...")
-    try:
-        # Create a simple test video
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter('test_video.mp4', fourcc, 20.0, (640,480))
-        frame = np.zeros((480,640,3), dtype=np.uint8)
-        frame[:,:,2] = 255  # Red frame
-        out.write(frame)
-        out.release()
-        
-        # Process video
-        frame = video_processor.extract_frame_from_bytes(open('test_video.mp4', 'rb').read())
-        if frame is not None:
-            print("✓ Video frame extracted")
-            processed_frame = video_processor.process_frame(frame)
-            print("✓ Frame processed")
-        else:
-            print("✗ Failed to extract frame")
-            
-        # Clean up
-        os.remove('test_video.mp4')
-    except Exception as e:
-        print(f"✗ Video processing failed: {str(e)}")
-    
-    print("\n=== Test Complete ===")
+# Load mô hình YOLOv12m đã huấn luyện
+model = YOLO("models/best.pt")  # thay bằng đường dẫn đến model của bạn
 
-if __name__ == "__main__":
-    test_services() 
+# Đọc video đầu vào
+video_path = "image/6635961542355.mp4"
+cap = cv2.VideoCapture(video_path)
+
+# Thông tin để lưu video kết quả
+output_path = "output_video.mp4"
+fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+# Xử lý từng frame
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Dự đoán với YOLOv12m
+    results = model.predict(frame, imgsz=640, conf=0.3)
+
+    # Vẽ kết quả lên frame
+    annotated_frame = results[0].plot()
+
+    # Hiển thị (tùy chọn)
+    cv2.imshow("YOLOv12m Detection", annotated_frame)
+
+    # Ghi ra video kết quả
+    out.write(annotated_frame)
+
+    # Nhấn 'q' để dừng sớm
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Giải phóng tài nguyên
+cap.release()
+out.release()
+cv2.destroyAllWindows()

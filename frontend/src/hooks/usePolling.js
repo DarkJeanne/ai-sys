@@ -13,7 +13,7 @@ const usePolling = (intervalSec = 5) => {
     intervalIdRef.current = setInterval(() => {
       console.log('🔁 Tick polling frame...');
       callback();
-    }, intervalSec * 1000);
+    }, intervalSec * 1000)  ;
 
     setIsPolling(true);
   }, [intervalSec]);

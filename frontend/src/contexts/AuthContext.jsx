@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async ({ username, password }) => {
+  const login = async ({ username, password, rememberMe}) => {
   try {
     const formData = new URLSearchParams();
     formData.append('username', username);
@@ -30,19 +30,41 @@ export const AuthProvider = ({ children }) => {
 
     const { access_token } = response.data;
     const userWithToken = { username, token: access_token };
-    setUser(userWithToken);
-    localStorage.setItem('user', JSON.stringify(userWithToken));
-    localStorage.setItem('token', access_token);
-  } catch (error) {
-    console.error('Login failed:', error);
-    throw error;
-  }
-};
 
+    setUser(userWithToken);
+
+//     localStorage.setItem('user', JSON.stringify(userWithToken));
+//     localStorage.setItem('token', access_token);
+//   } catch (error) {
+//     console.error('Login failed:', error);
+//     throw error;
+//   }
+// };
+    if (rememberMe) {
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        localStorage.setItem('token', access_token);
+      } else {
+        sessionStorage.setItem('user', JSON.stringify(userWithToken));
+        sessionStorage.setItem('token', access_token);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  };
+
+  // const logout = () => {
+  //   setUser(null);
+  //   localStorage.removeItem('user');
+  // };
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
   };
+
 
   if (loading) {
     return <div>Loading...</div>;
