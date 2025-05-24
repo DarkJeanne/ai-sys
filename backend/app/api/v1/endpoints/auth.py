@@ -9,26 +9,24 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.core.security import hash_password
 
-
 router = APIRouter()
-
 
 
 @router.post("/login/user", response_model=Token)
 def login_user(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+        form_data: OAuth2PasswordRequestForm = Depends(),
+        db: Session = Depends(get_db)
 ):
     # Truy vấn user từ database
     user = db.query(models.user.User).filter(models.user.User.username == form_data.username).first()
-    
+
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     role = user.role
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -41,7 +39,6 @@ def login_user(
 @router.post("/register", response_model=schemas.auth.UserOut)
 def register(user_data: schemas.auth.UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
-    print("Received data:", user_data.dict())
     if db.query(models.user.User).filter(models.user.User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -58,10 +55,9 @@ def register(user_data: schemas.auth.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/update-profile")
 def update_profile(
-    form_data: OAuth2PasswordRequestForm = Depends(),  # username + old_password
-    new_password: str = Form(None),                    # optional
-    new_email: str = Form(None),                       # optional
-    db: Session = Depends(get_db)
+        form_data: OAuth2PasswordRequestForm = Depends(),  # username + old_password
+        new_password: str = Form(None),  # optional                    # optional
+        db: Session = Depends(get_db)
 ):
     # Lấy user từ DB
     user = db.query(models.user.User).filter(models.user.User.username == form_data.username).first()
@@ -76,12 +72,6 @@ def update_profile(
     # Cập nhật mật khẩu mới nếu có
     if new_password:
         user.hashed_password = hash_password(new_password)
-
-    # Cập nhật email mới nếu có
-    if new_email:
-        if db.query(models.user.User).filter(models.user.User.email == new_email).first():
-            raise HTTPException(status_code=400, detail="Email đã được sử dụng")
-        user.email = new_email
 
     db.commit()
     db.refresh(user)

@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.endpoints import classify, auth, admin  # Đảm bảo các file này được định nghĩa đúng
+from app.api.v1.endpoints import classify, auth, admin, auth_refresh  # Đảm bảo các file này được định nghĩa đúng
 from app.database._init_db import _init_db  # Comment phần khởi tạo database
 from app.core.logger import get_logger  # Import get_logger thay vì setup_logging
+
 
 # Tạo ứng dụng FastAPI
 app = FastAPI()
@@ -21,6 +22,8 @@ _init_db()  # Comment phần khởi tạo database
 app.include_router(classify.router, prefix="/classify", tags=["classification"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+app.include_router(auth_refresh.router, prefix="/auth_refresh", tags=["auth_refresh"])
 
 # Add CORS middleware
 app.add_middleware(

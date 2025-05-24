@@ -15,7 +15,7 @@ function Register() {
                 username,
                 password,
                 email,
-                Role: "user" 
+                Role: "user"
             });
             alert('Đăng ký thành công');
             window.location.href = '/login';
@@ -66,8 +66,7 @@ function Register() {
                                     className="mt-1 block w-full rounded-md border-2 border-gray-200 shadow-sm focus:border-blue-600 focus:ring-blue-600"
                                 />
                             </div>
-
-                            <div>
+<div>
                                 <label className="block text-sm font-medium text-gray-700">Email</label>
                                 <input
                                     type="email"

@@ -7,7 +7,6 @@ function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     username: user?.username || '',
-    email: user?.email || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -39,7 +38,6 @@ function Profile() {
     if (isEditing) {  // Chỉ set formData tự động khi không đang chỉnh sửa
       setFormData({
         username: user?.username || '',
-        email: user?.email || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -63,7 +61,6 @@ function Profile() {
         username: formData.username,
         password: formData.currentPassword,
         newPassword: formData.newPassword || null,
-        newEmail: formData.email !== user.email ? formData.email : null,
       });
 
       setSuccess('Thông tin cá nhân đã được cập nhật!');
@@ -120,19 +117,6 @@ function Profile() {
                   className="mt-1 block w-full rounded-md border-2 border-gray-00 shadow-sm focus:border-blue-600 focus:ring-blue-600"
                 />
               </div>
-
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-2 border-gray-00 shadow-sm focus:border-blue-600 focus:ring-blue-600"
-                />
-              </div>
-
 
               {isEditing && (
                 <>

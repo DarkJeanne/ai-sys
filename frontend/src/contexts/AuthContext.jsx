@@ -65,7 +65,6 @@ export const AuthProvider = ({ children }) => {
       formData.append('username', username);
       formData.append('password', password);
       if (newPassword) formData.append('new_password', newPassword);
-      if (newEmail) formData.append('new_email', newEmail);
 
       const response = await api.post('/auth/update-profile', formData.toString(), {
         headers: {
@@ -80,7 +79,6 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
   };
-
 
 
   const logout = () => {
@@ -105,4 +103,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

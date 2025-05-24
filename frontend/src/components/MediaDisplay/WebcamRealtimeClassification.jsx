@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function WebcamRealtimeClassification() {
   const videoRef = useRef(null);
@@ -12,6 +13,9 @@ export default function WebcamRealtimeClassification() {
     bounding_box: [] // [x1, y1, x2, y2]
   });
 
+  const { user } = useAuth();
+  const token = user?.token || localStorage.getItem('token') || sessionStorage.getItem('token');
+
   useEffect(() => {
     console.log("Detection bbox:", detection.bounding_box);
     // Mở webcam
@@ -24,7 +28,16 @@ export default function WebcamRealtimeClassification() {
     startCamera();
 
     // Mở websocket
-    const ws = new WebSocket('ws://localhost:8000/classify/ws/camera');
+
+  if (!token) {
+    console.error("❌ Access token not found");
+    return;
+  }
+
+    const wsUrl = (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://localhost:8000/classify/ws/camera?token=' + encodeURIComponent(token);
+
+    const ws = new WebSocket(wsUrl);
+
     ws.onopen = () => {
       console.log('WebSocket connected');
       setWsConnected(true);
@@ -49,61 +62,84 @@ export default function WebcamRealtimeClassification() {
     wsRef.current = ws;
 
     return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, []);
+      const ws = wsRef.current;
+
+      if (!ws) return;
+
+      const state = ws.readyState;
+
+      console.log('🧹 Cleanup: websocket state =', state);
+
+      // Chỉ đóng nếu đang kết nối hoặc đã mở
+      if (state === WebSocket.CONNECTING) {
+        // Chờ websocket mở rồi mới đóng
+        ws.addEventListener('open', () => {
+          console.log('🧹 Delayed close after CONNECTING...');
+          ws.close();
+        });
+      } else if (state === WebSocket.OPEN) {
+        console.log('🧹 Closing OPEN WebSocket...');
+        ws.close();
+      } else {
+        console.log('🧹 No need to close: WebSocket already closing/closed');
+      }
+
+      wsRef.current = null;
+      };
+
+  }, [token]);
 
 
   const inputWidth = 320;
-  const inputHeight = 240;
-  // Vẽ bounding box lên canvas mỗi khi detection hoặc video thay đổi
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (!canvas || !video) return;
+const inputHeight = 240;
+// Vẽ bounding box lên canvas mỗi khi detection hoặc video thay đổi
+useEffect(() => {
+  const canvas = canvasRef.current;
+  const video = videoRef.current;
+  if (!canvas || !video) return;
 
-    const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
 
-    // Kích thước video thực tế
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+  // Kích thước video thực tế
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
 
-    if (videoWidth === 0 || videoHeight === 0) {
-      // Video chưa sẵn sàng
-      return;
-    }
+  if (videoWidth === 0 || videoHeight === 0) {
+    // Video chưa sẵn sàng
+    return;
+  }
 
-    // Cập nhật kích thước canvas theo kích thước video thực tế
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+  // Cập nhật kích thước canvas theo kích thước video thực tế
+  canvas.width = videoWidth;
+  canvas.height = videoHeight;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (detection.bounding_box.length === 4) {
-      const [x1, y1, x2, y2] = detection.bounding_box;
+  if (detection.bounding_box.length === 4) {
+    const [x1, y1, x2, y2] = detection.bounding_box;
 
-      // Backend trả bounding box theo ảnh 640x480, scale về video hiện tại
-      const scaleX = videoWidth / 640;
-      const scaleY = videoHeight / 480;
+    // Backend trả bounding box theo ảnh 640x480, scale về video hiện tại
+    const scaleX = videoWidth / 640;
+    const scaleY = videoHeight / 480;
 
-      const boxX = x1 * scaleX;
-      const boxY = y1 * scaleY;
-      const boxWidth = (x2 - x1) * scaleX;
-      const boxHeight = (y2 - y1) * scaleY;
+    const boxX = x1 * scaleX;
+    const boxY = y1 * scaleY;
+    const boxWidth = (x2 - x1) * scaleX;
+    const boxHeight = (y2 - y1) * scaleY;
 
-      ctx.strokeStyle = 'lime';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+    ctx.strokeStyle = 'lime';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-      ctx.font = '20px Arial';
-      ctx.fillStyle = 'lime';
-      const label = `${detection.classification} (${detection.confidence.toFixed(2)}%)`;
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'lime';
+    const label = `${detection.classification} (${detection.confidence.toFixed(2)}%)`;
 
-      // Vẽ label trên hoặc dưới bbox tuỳ vị trí bbox
-      ctx.fillText(label, boxX, boxY > 20 ? boxY - 5 : boxY + 20);
-    }
-  }, [detection]);
+    // Vẽ label trên hoặc dưới bbox tuỳ vị trí bbox
+    ctx.fillText(label, boxX, boxY > 20 ? boxY - 5 : boxY + 20);
+  }
+}, [detection]);
 
 
   // Gửi frame webcam lên server qua websocket (mỗi 100ms hoặc tuỳ ý)
@@ -132,34 +168,9 @@ export default function WebcamRealtimeClassification() {
     return () => clearInterval(interval);
   }, [wsConnected]);
 
-  useEffect(() => {
-    const startWebcam = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        onError && onError(err);
-      }
-    };
-
-    startWebcam();
-
-    return () => {
-      // Tắt webcam khi unmount
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, []);
-
-
   return (
-    <div style={{ position: 'relative', width: '550px', height: '480px' }}>
+    <div style={{ position: 'relative', width: '640px', height: '480px' }}>
       <video
-        id="webcam-video" // 👈 Thêm dòng này
         ref={videoRef}
         autoPlay
         muted
@@ -172,6 +183,4 @@ export default function WebcamRealtimeClassification() {
       />
     </div>
   );
-
-
 }
