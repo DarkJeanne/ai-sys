@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 function Register() {
-    const { register } = useAuth();
+    const {register} = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
@@ -15,7 +15,8 @@ function Register() {
             await register({
                 username,
                 password,
-                Role: "user" 
+                email,
+                Role: "user"
             });
             alert('Đăng ký thành công');
             window.location.href = '/login';
@@ -66,6 +67,17 @@ function Register() {
                                     className="mt-1 block w-full rounded-md border-2 border-gray-200 shadow-sm focus:border-blue-600 focus:ring-blue-600"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Email</label>
+                                <input
+                                    type="email"
+                                    autoComplete="off"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    className="mt-1 block w-full rounded-md border-2 border-gray-200 shadow-sm focus:border-blue-600 focus:ring-blue-600"
+                                />
+                            </div>
 
                             {/* Nút quay lại + đăng ký cùng dòng, căn phải */}
                             <div className="flex justify-end space-x-4">
@@ -90,5 +102,4 @@ function Register() {
         </div>
     );
 }
-
 export default Register;

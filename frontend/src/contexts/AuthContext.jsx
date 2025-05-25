@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/register', {
         username,
         password,
+        email,
         Role: "user"
       });
 
@@ -153,4 +154,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

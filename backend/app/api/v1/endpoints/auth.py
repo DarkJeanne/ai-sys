@@ -41,10 +41,12 @@ def login_user(
 @router.post("/register", response_model=schemas.auth.UserOut)
 def register(user_data: schemas.auth.UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
-    print("Received data:", user_data.dict())
+    if db.query(models.user.User).filter(models.user.User.email == user_data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     new_user = models.user.User(
         username=user_data.username,
+        email=user_data.email,
         hashed_password=hash_password(user_data.password)
     )
 

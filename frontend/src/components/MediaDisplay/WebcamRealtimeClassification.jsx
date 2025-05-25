@@ -48,9 +48,6 @@ export default function WebcamRealtimeClassification() {
     };
     wsRef.current = ws;
 
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
   }, []);
 
 
