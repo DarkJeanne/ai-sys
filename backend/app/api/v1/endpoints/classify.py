@@ -1,29 +1,31 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services.classifier import Classifier
-from app.services.video_processor import VideoProcessor
-import tempfile
-from PIL import Image
-import time
-import io
-from app.schemas.result import ClassificationResultResponse
-from app.services import utils
-from datetime import datetime
-from fastapi import APIRouter, WebSocket
-import cv2
-import base64
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import io
+
+import os
 import base64
 from fastapi import WebSocket, Query, WebSocketDisconnect
 from app.core.security import get_user_from_token
 from starlette.websockets import WebSocketState
-import asyncio
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi.responses import JSONResponse
+import base64
+import io
+from PIL import Image, ImageDraw
+import numpy as np
+import cv2
+from app.services.classifier import Classifier
+from app.services.video_processor import VideoProcessor
+from app.core.security import get_user_from_token
+import uuid
+from fastapi.responses import FileResponse
+
+frames_list = []  # lưu đường dẫn các frame tạm
+FRAME_DIR = "temp_frames"
+OUTPUT_VIDEO = "output_video.mp4"
+if not os.path.exists(FRAME_DIR):
+    os.makedirs(FRAME_DIR)
 
 router = APIRouter()
 classifier = Classifier()
 video_processor = VideoProcessor(frame_skip=0)  # Set frame_skip to 1 to capture every frame for 60fps
-
 
 @router.post("/analyze_image")
 async def analyze_image(file: UploadFile = File(...)):
@@ -116,53 +118,55 @@ async def websocket_camera(websocket: WebSocket):
         pass
 
 
-@router.websocket("/ws/video_stream")
-async def websocket_video_stream(websocket: WebSocket):
-    await websocket.accept()
+@router.post("/api/process_frame")
+async def process_frame(request: Request):
+    data = await request.json()
+    image_base64 = data.get("image_base64")
+
+    if not image_base64:
+        return JSONResponse(status_code=400, content={"error": "No image_base64 provided"})
+
     try:
-        while True:
-            # Nhận dữ liệu, có thể là bytes hoặc text
-            try:
-                data = await websocket.receive_bytes()
-                is_bytes = True
-            except Exception:
-                # Nếu không nhận được bytes, thử nhận text
-                data = await websocket.receive_text()
-                is_bytes = False
+        if "," in image_base64:
+            header, image_base64 = image_base64.split(",", 1)
 
-            # Kiểm tra tín hiệu kết thúc
-            if not is_bytes:
-                if data == "EOF" or data == "END":
-                    print("Client sent EOF, closing websocket")
-                    break
-                else:
-                    print(f"Unexpected text message: {data}")
-                    continue
+        image_bytes = base64.b64decode(image_base64)
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-            # Nếu là frame bytes, xử lý bình thường
-            asyncio.create_task(handle_frame(data, websocket))
+        # Lưu frame ra file với tên uuid để tránh trùng
+        frame_filename = os.path.join(FRAME_DIR, f"{uuid.uuid4()}.jpg")
+        image.save(frame_filename)
+        frames_list.append(frame_filename)
+
+        # Giới hạn số frame, ví dụ tối đa 20 frame (4s * 5fps)
+        if len(frames_list) >= 20:
+            # Tạo video từ frames
+            first_frame = cv2.imread(frames_list[0])
+            height, width, layers = first_frame.shape
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            video = cv2.VideoWriter(OUTPUT_VIDEO, fourcc, 5, (width, height))
+
+            for frame_path in frames_list:
+                frame = cv2.imread(frame_path)
+                video.write(frame)
+            video.release()
+
+            # Xoá ảnh tạm sau khi tạo video
+            for f in frames_list:
+                os.remove(f)
+            frames_list.clear()
+
+            return JSONResponse(content={"msg": "Video created"})
+
+        return JSONResponse(content={"msg": "Frame received and processed"})
 
     except Exception as e:
-        print(f"WebSocket error: {e}")
-    finally:
-        if websocket.client_state != WebSocketState.DISCONNECTED:
-            await websocket.close()
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-async def handle_frame(data, websocket: WebSocket):
-    try:
-        nparr = np.frombuffer(data, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if frame is None:
-            return
-
-        result = classifier.predict_frame(frame)
-
-        await websocket.send_json({
-            "classification": result["classification"],
-            "confidence": result["confidence"],
-            "bounding_box": result.get("bounding_box", [])
-        })
-    except Exception as e:
-        print("Frame error:", e)
+@router.get("/api/get_processed_video")
+async def get_processed_video():
+    if os.path.exists(OUTPUT_VIDEO):
+        return FileResponse(OUTPUT_VIDEO, media_type="video/mp4", filename="processed_video.mp4")
+    else:
+        return JSONResponse(status_code=404, content={"error": "No processed video found"})

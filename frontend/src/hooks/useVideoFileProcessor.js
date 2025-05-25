@@ -1,93 +1,31 @@
-/**
- * Custom hook for processing video files with frame extraction and real-time classification.
- * This hook manages video loading, frame extraction, and integration with the polling mechanism.
- * 
- * @param {number} frameRate - Number of frames to process per second (default: 5)
- * @returns {Object} Video processing controls and state
- * @property {File|null} videoFile - The currently loaded video file
- * @property {number} currentTime - Current playback time in seconds
- * @property {number} duration - Total duration of the video in seconds
- * @property {boolean} isPlaying - Whether the video is currently playing
- * @property {boolean} isPolling - Whether frame processing is active
- * @property {Function} loadVideo - Load a video file for processing
- * @property {Function} startProcessing - Start frame processing
- * @property {Function} stopProcessing - Stop frame processing
- * @property {Function} seekTo - Seek to a specific time in the video
- * @property {Function} cleanup - Clean up resources
- * 
- * @example
- * const {
- *   loadVideo,
- *   startProcessing,
- *   stopProcessing,
- *   isPlaying,
- *   currentTime,
- *   duration
- * } = useVideoFileProcessor(5);
- * 
- * // Load a video file
- * const handleFileSelect = (event) => {
- *   const file = event.target.files[0];
- *   loadVideo(file);
- * };
- * 
- * // Start processing
- * const handleStart = () => {
- *   startProcessing();
- * };
- * 
- * // Stop processing
- * const handleStop = () => {
- *   stopProcessing();
- * };
- */
 import { useState, useCallback, useRef } from 'react';
-import usePolling from './usePolling';
 
 const useVideoFileProcessor = (frameRate = 5) => {
   const [videoFile, setVideoFile] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [processedVideoUrl, setProcessedVideoUrl] = useState(null);
   const videoRef = useRef(null);
-  const { startPolling, stopPolling, isPolling } = usePolling(frameRate);
 
-  /**
-   * Load a video file and prepare it for processing
-   * @param {File} file - The video file to load
-   */
   const loadVideo = useCallback((file) => {
     if (!file) return;
-    
     const video = document.createElement('video');
     video.src = URL.createObjectURL(file);
-    
-    video.onloadedmetadata = () => {
-      setDuration(video.duration);
-      setVideoFile(file);
-      videoRef.current = video;
-    };
 
-    video.onerror = (error) => {
-      console.error('Error loading video:', error);
-      setVideoFile(null);
-      setDuration(0);
+    video.onloadedmetadata = () => {
+      videoRef.current = video; // Đặt trước
+      setDuration(video.duration);
+      setVideoFile(file); // Sau cùng để tránh render khi chưa sẵn sàng
     };
   }, []);
 
-  /**
-   * Capture a frame from the video at the specified time
-   * @param {number} time - Time in seconds to capture the frame
-   * @returns {Promise<string|null>} Base64 encoded image data or null if capture fails
-   */
   const captureFrame = useCallback((time) => {
     if (!videoRef.current) return null;
-
     return new Promise((resolve) => {
       const video = videoRef.current;
-      video.currentTime = time;
 
-      video.onseeked = () => {
+      const handler = () => {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -95,73 +33,107 @@ const useVideoFileProcessor = (frameRate = 5) => {
         ctx.drawImage(video, 0, 0);
         const frameData = canvas.toDataURL('image/jpeg');
         canvas.remove();
+        video.removeEventListener('seeked', handler);
         resolve(frameData);
       };
 
-      video.onerror = (error) => {
-        console.error('Error capturing frame:', error);
-        resolve(null);
-      };
+      video.addEventListener('seeked', handler);
+      video.currentTime = time;
     });
   }, []);
 
-  /**
-   * Start processing frames from the video
-   */
-  const startProcessing = useCallback(() => {
+  // Gửi 1 frame lên backend
+  const sendFrameToBackend = useCallback(async (frameData) => {
+    if (!frameData) return;
+    try {
+      const response = await fetch('http://localhost:8000/classify/api/process_frame', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_base64: frameData }),
+      });
+      if (!response.ok) {
+        console.error('Failed to send frame:', response.statusText);
+        return null;
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Error sending frame to backend:', error);
+      return null;
+    }
+  }, []);
+
+  // Lấy video đã xử lý về frontend
+  const fetchProcessedVideo = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:8000/classify/api/get_processed_video');
+      if (!response.ok) {
+        console.error('Failed to fetch processed video');
+        return null;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setProcessedVideoUrl(url);
+    } catch (error) {
+      console.error('Error fetching processed video:', error);
+    }
+  }, []);
+
+  // Bắt đầu xử lý video từng frame
+  const startProcessing = useCallback(async () => {
     if (!videoRef.current || isPlaying) return;
+    if (duration === 0) {
+      console.warn('Video chưa load xong, duration = 0');
+      return;
+    }
 
     setIsPlaying(true);
-    startPolling(async () => {
-      const frame = await captureFrame(currentTime);
-      setCurrentTime(prev => {
-        const next = prev + (1 / frameRate);
-        return next >= duration ? 0 : next;
-      });
-      return frame;
-    });
-  }, [captureFrame, currentTime, duration, frameRate, isPlaying, startPolling]);
 
-  /**
-   * Stop processing frames
-   */
-  const stopProcessing = useCallback(() => {
-    setIsPlaying(false);
-    stopPolling();
-  }, [stopPolling]);
+    try {
+      const totalFrames = Math.min(20, Math.floor(duration * frameRate));
+      let time = 0;
 
-  /**
-   * Seek to a specific time in the video
-   * @param {number} time - Time in seconds to seek to
-   */
-  const seekTo = useCallback((time) => {
-    if (!videoRef.current) return;
-    setCurrentTime(Math.max(0, Math.min(time, duration)));
-  }, [duration]);
+      for (let i = 0; i < totalFrames; i++) {
+        const frame = await captureFrame(time);
+        if (frame) {
+          const res = await sendFrameToBackend(frame);
+          if (res?.msg === "Video created") {
+            break;
+          }
+        }
+        time += 1 / frameRate;
+        if (time > duration) break;
+      }
 
-  /**
-   * Clean up resources
-   */
+      await fetchProcessedVideo();
+    } catch (error) {
+      console.error('Lỗi trong quá trình xử lý video:', error);
+    } finally {
+      setIsPlaying(false);
+    }
+  }, [captureFrame, duration, frameRate, isPlaying, sendFrameToBackend, fetchProcessedVideo]);
+
   const cleanup = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.src = '';
       videoRef.current = null;
     }
-    stopProcessing();
-  }, [stopProcessing]);
+    setVideoFile(null);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+    setProcessedVideoUrl(null);
+  }, []);
 
   return {
     videoFile,
     currentTime,
     duration,
     isPlaying,
-    isPolling,
+    processedVideoUrl,
     loadVideo,
     startProcessing,
-    stopProcessing,
-    seekTo,
     cleanup,
   };
 };
 
-export default useVideoFileProcessor; 
+export default useVideoFileProcessor;

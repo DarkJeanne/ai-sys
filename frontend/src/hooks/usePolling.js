@@ -1,7 +1,7 @@
 // hooks/usePolling.js
 import { useRef, useState, useCallback } from 'react';
 
-const usePolling = (intervalSec = 5) => {
+const usePolling = (intervalSec = 1) => {
   const intervalIdRef = useRef(null);
   const [isPolling, setIsPolling] = useState(false);
 
