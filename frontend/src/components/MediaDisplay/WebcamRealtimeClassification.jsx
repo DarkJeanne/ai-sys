@@ -30,7 +30,7 @@ export default function WebcamRealtimeClassification() {
     // Mở websocket
 
   if (!token) {
-    console.error("❌ Access token not found");
+    console.error("Access token not found");
     return;
   }
 
