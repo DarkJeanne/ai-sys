@@ -29,10 +29,33 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { access_token } = response.data;
-      const userWithToken = { username, token: access_token };
-      setUser(userWithToken);
-      localStorage.setItem('user', JSON.stringify(userWithToken));
-      localStorage.setItem('token', access_token);
+      
+      // Lấy thông tin người dùng từ API (bao gồm vai trò)
+      try {
+        const userResponse = await api.get('/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${access_token}`
+          }
+        });
+        
+        // Lưu thông tin người dùng với token và vai trò
+        const userWithToken = { 
+          username, 
+          token: access_token,
+          role: userResponse.data.role || 'user' // Lưu vai trò người dùng
+        };
+        
+        setUser(userWithToken);
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        localStorage.setItem('token', access_token);
+      } catch (userError) {
+        console.error('Error fetching user details:', userError);
+        // Nếu không lấy được thông tin người dùng, vẫn đăng nhập nhưng không có vai trò
+        const userWithToken = { username, token: access_token };
+        setUser(userWithToken);
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        localStorage.setItem('token', access_token);
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -79,11 +102,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-
-
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+  };
+
+  // Hàm cập nhật vai trò người dùng
+  const refreshUserRole = async () => {
+    if (!user || !user.token) return;
+    
+    try {
+      // Lấy thông tin người dùng từ API
+      const userResponse = await api.get('/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      // Cập nhật thông tin người dùng với vai trò mới
+      const updatedUser = { 
+        ...user,
+        role: userResponse.data.role || user.role || 'user'
+      };
+      
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      console.log('User role refreshed:', updatedUser.role);
+      return updatedUser;
+    } catch (error) {
+      console.error('Error refreshing user role:', error);
+      return user;
+    }
   };
 
   if (loading) {
@@ -91,7 +141,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register,updateProfile }}>
+    <AuthContext.Provider value={{ user, login, logout, register, updateProfile, refreshUserRole }}>
       {children}
     </AuthContext.Provider>
   );
