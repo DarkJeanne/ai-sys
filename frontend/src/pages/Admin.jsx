@@ -82,7 +82,7 @@ function Admin() {
                   {/* Nút chỉnh sửa */}
                   <button className="text-blue-600 hover:text-blue-900">
                     <img
-                      src="/src/public/edit.png"
+                      src="/edit.png"
                       alt="Edit"
                       className="h-6 w-6 object-contain"
                     />
@@ -91,7 +91,7 @@ function Admin() {
                   {/* Nút xoá */}
                   <button className="text-red-600 hover:text-red-900">
                     <img
-                      src="/src/public/delete.png"
+                      src="/delete.png"
                       alt="Delete"
                       className="h-8 w-8 object-contain"
                     />

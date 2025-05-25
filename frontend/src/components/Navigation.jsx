@@ -31,7 +31,7 @@ function Navigation() {
           {/* Left: Logo / Title */}
           <div className="flex items-center space-x-3">
             <img
-              src="/src/public/logoDas.png"
+              src="/logoDas.png"
               alt="Logo"
               className="h-12 w-12 object-contain"
             />

@@ -22,7 +22,7 @@ const AboutUs = () => {
                 {/* Right: Ảnh chân dung */}
                 <div className="md:w-1/2 w-full flex items-center justify-center p-8 bg-white">
                     <img
-                        src="/src/public/hoangtu.png" // Nếu ảnh đặt trong public folder
+                        src="/hoangtu.png" // Nếu ảnh đặt trong public folder
                         alt="Hoàng Tú"
                         className="w-80 h-80 object-cover rounded-full border-4 border-[#0b1f3a] shadow-md"
                     />
@@ -44,7 +44,7 @@ const AboutUs = () => {
                 {/* Right: Ảnh chân dung */}
                 <div className="md:w-1/2 w-full flex items-center justify-center p-8 bg-white">
                     <img
-                        src="/src/public/baquang.png" // Nếu ảnh đặt trong public folder
+                        src="/baquang.png" // Nếu ảnh đặt trong public folder
                         alt="Bá Quang"
                         className="w-80 h-80 object-cover rounded-full border-4 border-[#3dd9e6] shadow-md"
                     />
@@ -66,7 +66,7 @@ const AboutUs = () => {
                 {/* Right: Ảnh chân dung */}
                 <div className="md:w-1/2 w-full flex items-center justify-center p-8 bg-white">
                     <img
-                        src="/src/public/minhson.png" // Nếu ảnh đặt trong public folder
+                        src="/minhson.png" // Nếu ảnh đặt trong public folder
                         alt="Minh Sơn"
                         className="w-80 h-80 object-cover rounded-full border-4 border-[#0b1f3a] shadow-md"
                     />
@@ -88,7 +88,7 @@ const AboutUs = () => {
                 {/* Right: Ảnh chân dung */}
                 <div className="md:w-1/2 w-full flex items-center justify-center p-8 bg-white">
                     <img
-                        src="/src/public/minhtung.png" // Nếu ảnh đặt trong public folder
+                        src="/minhtung.png" // Nếu ảnh đặt trong public folder
                         alt="Mai Tùng"
                         className="w-80 h-80 object-cover rounded-full border-4 border-[#3dd9e6] shadow-md"
                     />
@@ -110,7 +110,7 @@ const AboutUs = () => {
                 {/* Right: Ảnh chân dung */}
                 <div className="md:w-1/2 w-full flex items-center justify-center p-8 bg-white">
                     <img
-                        src="/src/public/thetrung.jpg" // Nếu ảnh đặt trong public folder
+                        src="/thetrung.jpg" // Nếu ảnh đặt trong public folder
                         alt="Thế Trung"
                         className="w-80 h-80 object-cover rounded-full border-4 border-[#0b1f3a] shadow-md"
                     />
@@ -140,7 +140,7 @@ const AboutUs = () => {
                 {/* Logo + bản quyền */}
                 <div className="w-full px-4 sm:px-6 lg:px-8 mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
                     <div className="flex justify-center items-center gap-2">
-                        <img src="/src/public/logoDas.png" alt="Logo" className="h-6" />
+                        <img src="/logoDas.png" alt="Logo" className="h-6" />
                         <span className="font-bold text-black">TOMATO FRESH AI</span>
                     </div>
                     <p className="mt-2">Copyright © 2025 Tomato Quality Inspection Project. All Rights Reserved</p>
