@@ -131,7 +131,7 @@ function MainApp() {
           <div className="flex-1">
             <div className="mb-4">
               <img
-                src="/src/public/cachua.png" // Thay thế bằng đường dẫn thực tế
+                src="/cachua.png" // Thay thế bằng đường dẫn thực tế
                 alt="Food Freshness"
                 className="w-full h-[500px] object-cover rounded-lg shadow-xl" // giữ khung chữ nhật
               />
@@ -374,7 +374,7 @@ function MainApp() {
           <div className="flex-1 flex justify-center">
             <div className="rounded-2xl overflow-hidden shadow-lg">
               <img
-                src="/src/public/hoaqua.png"  // <-- Đổi thành ảnh minh họa thực tế bạn có
+                src="/hoaqua.png"  // <-- Đổi thành ảnh minh họa thực tế bạn có
                 alt="Food Freshness Detection Example"
                 className="w-full max-w-xl h-auto object-cover"
               />
@@ -490,7 +490,7 @@ function MainApp() {
         {/* Logo + bản quyền */}
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
           <div className="flex justify-center items-center gap-2">
-            <img src="/src/public/logoDas.png" alt="Logo" className="h-6" />
+            <img src="/logoDas.png" alt="Logo" className="h-6" />
             <span className="font-bold text-white">TOMATO FRESH AI</span>
           </div>
           <p className="mt-2">Copyright © 2025 Tomato Quality Inspection Project. All Rights Reserved</p>
