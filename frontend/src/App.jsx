@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useAppState } from './contexts/AppStateContext';
 import { useAuth } from './contexts/AuthContext';
 import { AuthProvider } from './contexts/AuthContext';
-import useVideoFileProcessor from './hooks/useVideoFileProcessor';
 import classificationService from './services/classificationService';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
@@ -35,15 +34,6 @@ function MainApp() {
     }
   };
 
-  const {
-    loadVideo,
-    startProcessing: startVideoProcessing,
-    stopProcessing: stopVideoProcessing,
-    isPlaying: isVideoPlaying,
-    currentTime,
-    duration,
-    cleanup: cleanupVideo
-  } = useVideoFileProcessor(5);
 
   // Handle file selection
   const processFile = async (file) => {
@@ -77,21 +67,6 @@ function MainApp() {
   };
 
 
-  // Handle video controls
-  const handleVideoStart = () => {
-    startVideoProcessing();
-  };
-
-  const handleVideoStop = () => {
-    stopVideoProcessing();
-  };
-
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      cleanupVideo();
-    };
-  }, [cleanupVideo]);
 
   const path = window.location.pathname;
   if (path === '/register') {
@@ -143,7 +118,7 @@ function MainApp() {
         <div className="mb-4">
           <h1 className="text-black text-3xl font-bold">Tomato Quality Inspection - Kiểm tra chất lượng cà chua </h1>
           <p className="text-black-600 mt-2 text-base max-w-6xl mx-auto">
-            Khám phá độ tươi và chất lượng cà chua của bạn với công nghệ AI hiện đại. Tải ảnh hoặc video để nhận kết quả chi tiết về độ tươi và trạng thái của cà chua.
+            Khám phá độ tươi và chất lượng cà chua của bạn với công nghệ AI hiện đại. Tải ảnh để nhận kết quả chi tiết về độ tươi và trạng thái của cà chua.
           </p>
         </div>
       </div>
@@ -156,7 +131,7 @@ function MainApp() {
           <div className="flex-1">
             <div className="mb-4">
               <img
-                src="/src/public/cachua.png" // Thay thế bằng đường dẫn thực tế
+                src="/cachua.png" // Thay thế bằng đường dẫn thực tế
                 alt="Food Freshness"
                 className="w-full h-[500px] object-cover rounded-lg shadow-xl" // giữ khung chữ nhật
               />
@@ -271,15 +246,6 @@ function MainApp() {
                         Ảnh
                       </button>
 
-                      <button
-                        onClick={() => dispatch({ type: 'SET_INPUT_TYPE', payload: 'video' })}
-                        className={`px-4 py-2 rounded font-medium transition ${state.inputType === 'video'
-                          ? 'bg-[#14213D] text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-[#3dd9e6]'
-                          }`}
-                      >
-                        Video
-                      </button>
 
                       <button
                         onClick={() => dispatch({ type: 'SET_INPUT_TYPE', payload: 'webcam' })}
@@ -293,12 +259,12 @@ function MainApp() {
                     </div>
 
                     {/* File Input */}
-                    {(state.inputType === 'image' || state.inputType === 'video') && (
+                    {(state.inputType === 'image' ) && (
                       <div className="mb-4 w-full flex flex-col items-center space-y-2">
                         {/* File input */}
                         <input
                           type="file"
-                          accept={state.inputType === 'image' ? 'image/*' : 'video/*'}
+                          accept={state.inputType === 'image' }
                           onChange={handleFileSelect}
                           className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4
                           file:rounded file:border-0 file:text-sm file:font-semibold
@@ -361,31 +327,6 @@ function MainApp() {
         </div>
       </div>
 
-      {/* Video Controls */}
-      {state.inputType === 'video' && selectedFile && (
-        <div className="mb-4 text-center">
-          {!isVideoPlaying ? (
-            <button
-              onClick={handleVideoStart}
-              className="bg-green-500 text-white px-4 py-2 rounded mr-2 hover:bg-green-600"
-            >
-              Start Processing
-            </button>
-          ) : (
-            <button
-              onClick={handleVideoStop}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Stop Processing
-            </button>
-          )}
-          {duration > 0 && (
-            <div className="mt-2">
-              Progress: {Math.round(currentTime)}s / {Math.round(duration)}s
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Error */}
       {state.error && (
@@ -413,8 +354,8 @@ function MainApp() {
 
             <div className="space-y-5 text-black text-base leading-relaxed">
               <div>
-                <h4 className="font-semibold text-[#3dd9e6]">Tải ảnh hoặc video</h4>
-                <p>Chọn ảnh hoặc quay video cà chua bằng thiết bị của bạn, hoặc sử dụng webcam trực tiếp.</p>
+                <h4 className="font-semibold text-[#3dd9e6]">Tải ảnh </h4>
+                <p>Chọn ảnh cà chua bằng thiết bị của bạn, hoặc sử dụng webcam trực tiếp.</p>
               </div>
 
               <div>
@@ -433,7 +374,7 @@ function MainApp() {
           <div className="flex-1 flex justify-center">
             <div className="rounded-2xl overflow-hidden shadow-lg">
               <img
-                src="/src/public/hoaqua.png"  // <-- Đổi thành ảnh minh họa thực tế bạn có
+                src="/hoaqua.png"  // <-- Đổi thành ảnh minh họa thực tế bạn có
                 alt="Food Freshness Detection Example"
                 className="w-full max-w-xl h-auto object-cover"
               />
@@ -500,7 +441,6 @@ function MainApp() {
             <ul className="space-y-2 text-gray-300">
               <li><a href="#">Phân loại độ tươi</a></li>
               <li><a href="#">Nhận diện từ webcam</a></li>
-              <li><a href="#">Phân tích từ video</a></li>
               <li><a href="#">Hiển thị kết quả</a></li>
             </ul>
           </div>
@@ -550,7 +490,7 @@ function MainApp() {
         {/* Logo + bản quyền */}
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
           <div className="flex justify-center items-center gap-2">
-            <img src="/src/public/logoDas.png" alt="Logo" className="h-6" />
+            <img src="/logoDas.png" alt="Logo" className="h-6" />
             <span className="font-bold text-white">TOMATO FRESH AI</span>
           </div>
           <p className="mt-2">Copyright © 2025 Tomato Quality Inspection Project. All Rights Reserved</p>

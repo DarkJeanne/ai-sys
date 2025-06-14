@@ -85,7 +85,7 @@ function Profile() {
                   className="bg-[#3dd9e6] text-white px-4 py-2 rounded hover:bg-[#0b1f3a] flex items-center justify-center"
                 >
                   <img
-                    src="/src/public/edit.png"
+                    src="/edit.png"
                     alt="Edit"
                     className="h-6 w-6 object-contain"
                   />
@@ -186,4 +186,5 @@ function Profile() {
   );
 }
 
-export default Profile; 
+export default Profile;
+

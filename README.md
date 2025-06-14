@@ -13,10 +13,9 @@ hệ thống phân loại chất lượng thực phẩm
 
 ####  **1. Mục tiêu dự án**
 
-Xây dựng một hệ thống web giúp người dùng kiểm tra **chất lượng cà chua** dựa trên hình ảnh, video hoặc luồng webcam.
+Xây dựng một hệ thống web giúp người dùng kiểm tra **chất lượng cà chua** dựa trên hình ảnh hoặc luồng webcam.
 Người dùng có thể:
 *  Tải lên **ảnh** thực phẩm để phân loại
-*  Tải lên **video** và nhận kết quả phân loại trên từng khung hình (frame)
 *  Sử dụng **webcam** để kiểm tra chất lượng thực phẩm theo thời gian thực
 
 Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa dữ liệu.
@@ -43,7 +42,7 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 
 **Chức năng chính:**
 
-* Chọn loại đầu vào (ảnh, video, webcam)
+* Chọn loại đầu vào (ảnh, webcam)
 * Hiển thị kết quả phân loại và độ tin cậy
 * Giao diện trực quan, dễ dùng, phản hồi nhanh
 * Trang admin riêng
@@ -53,16 +52,16 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 | Thư mục/File     | Vai trò                                 |
 | ---------------- | --------------------------------------- |
 | `InputControls/` | Chọn loại input, điều khiển file/webcam |
-| `MediaDisplay/`  | Hiển thị ảnh, video, hoặc webcam stream |
+| `MediaDisplay/`  | Hiển thị ảnh hoặc webcam stream         |
 | `Results/`       | Hiển thị kết quả phân loại chi tiết     |
-| `hooks/`         | Xử lý logic: webcam, video              |
+| `hooks/`         | Xử lý logic: webcam        |
 | `contexts/`      | Quản lý trạng thái toàn cục             |
 | `services/`      | Tương tác với API backend               |
 | `pages/`         | Các trang chính: phân loại, admin       |
 
 **Luồng hoạt động:**
 
-1. User chọn input (ảnh/video/webcam)
+1. User chọn input (ảnh/webcam)
 2. Frontend lấy dữ liệu từ input
 3. Frontend gửi dữ liệu đến API backend
 4. Nhận kết quả phân loại và hiển thị
@@ -75,7 +74,7 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 
 * Nhận ảnh hoặc frame từ frontend
 * Chạy inference qua mô hình AI để phân loại
-* Trả kết quả nhanh, tối ưu real-time cho video/webcam
+* Trả kết quả nhanh, tối ưu real-time cho webcam
 * Cung cấp API riêng cho admin
 * Xử lý xác thực (JWT) cho admin endpoint
 
@@ -84,9 +83,8 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 | Endpoint                                   | Mô tả                                |
 | ------------------------------------------ | ------------------------------------ |
 | `POST /api/classify/image`                 | Nhận ảnh tĩnh                        |
-| `POST /api/classify/frame`                 | Nhận frame từ video/webcam           |
-| `POST /api/classify/video-file` (tùy chọn) | Nhận file video để phân loại toàn bộ |
-| `POST /api/auth/login` (nếu có admin)      | Đăng nhập admin                      |
+| `POST /api/classify/frame`                 | Nhận frame từ webcam                 |
+| `POST /api/auth/login`                     | Đăng nhập admin                      |
 | `GET /api/admin/stats`                     | Lấy thống kê tổng quát               |
 | `GET /api/admin/classifications`           | Lấy danh sách phân loại              |
 | `DELETE /api/admin/classifications/{id}`   | Xóa bản ghi phân loại                |
@@ -94,7 +92,7 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 **Lưu ý quan trọng:**
 
 * Hỗ trợ **CORS** đầy đủ để frontend có thể gửi request.
-* Tối ưu **thời gian phản hồi** cho từng frame/video để tránh lag.
+* Tối ưu **thời gian phản hồi** cho từng frame để tránh lag.
 * Có thể mở rộng **WebcamSocket** nếu muốn real-time mượt hơn (nâng cao).
 
 ---
@@ -119,7 +117,7 @@ Hệ thống cung cấp một **giao diện admin** để thêm, sửa, xóa d�
 
 #### **7. Kết quả kỳ vọng**
 
-* Người dùng có thể nhanh chóng phân loại thực phẩm từ ảnh, video hoặc webcam.
+* Người dùng có thể nhanh chóng phân loại thực phẩm từ ảnh hoặc webcam.
 * Giao diện admin trực quan, dễ quản lý.
 * Backend phản hồi nhanh, hỗ trợ tải lớn và dễ mở rộng.
 * Dễ dàng deploy, scale khi cần thiết.
